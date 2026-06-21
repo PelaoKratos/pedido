@@ -65,4 +65,8 @@ public class Pedido {
 	@JsonManagedReference
 	@OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<HistorialEstadoPedido> historialEstados = new ArrayList<>();
+
+	@JsonManagedReference(value = "pedido-usos-cupon")
+	@OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<UsoCupon> usosCupon = new ArrayList<>();
 }

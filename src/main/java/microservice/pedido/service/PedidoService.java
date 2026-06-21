@@ -1,6 +1,7 @@
 package microservice.pedido.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,8 +12,12 @@ import microservice.pedido.exception.ResourceNotFoundException;
 import microservice.pedido.model.DetallePedido;
 import microservice.pedido.model.HistorialEstadoPedido;
 import microservice.pedido.model.Pedido;
+import microservice.pedido.model.Cupon;
+import microservice.pedido.model.UsoCupon;
+import microservice.pedido.repository.CuponRepository;
 import microservice.pedido.repository.HistorialEstadoPedidoRepository;
 import microservice.pedido.repository.PedidoRepository;
+import microservice.pedido.repository.UsoCuponRepository;
 
 @Service
 public class PedidoService {
@@ -25,10 +30,15 @@ public class PedidoService {
 
 	private final PedidoRepository pedidoRepository;
 	private final HistorialEstadoPedidoRepository historialRepository;
+	private final CuponRepository cuponRepository;
+	private final UsoCuponRepository usoCuponRepository;
 
-	public PedidoService(PedidoRepository pedidoRepository, HistorialEstadoPedidoRepository historialRepository) {
+	public PedidoService(PedidoRepository pedidoRepository, HistorialEstadoPedidoRepository historialRepository,
+			CuponRepository cuponRepository, UsoCuponRepository usoCuponRepository) {
 		this.pedidoRepository = pedidoRepository;
 		this.historialRepository = historialRepository;
+		this.cuponRepository = cuponRepository;
+		this.usoCuponRepository = usoCuponRepository;
 	}
 
 	public List<Pedido> listar() {
@@ -121,6 +131,47 @@ public class PedidoService {
 		return historialRepository.findByPedidoIdPedido(idPedido);
 	}
 
+	@Transactional
+	public Pedido aplicarCupon(Long idPedido, Long idCupon) {
+		Pedido pedido = buscarPedido(idPedido);
+		Cupon cupon = cuponRepository.findById(idCupon)
+				.orElseThrow(() -> new ResourceNotFoundException("No existe el cupon con id " + idCupon));
+		prepararDetalles(pedido);
+		calcularTotales(pedido);
+		validarCuponAplicable(pedido, cupon);
+		BigDecimal descuentoAplicado = calcularDescuentoCupon(pedido, cupon);
+		UsoCupon usoCupon = new UsoCupon();
+		usoCupon.setPedido(pedido);
+		usoCupon.setCupon(cupon);
+		usoCupon.setFechaUso(LocalDateTime.now());
+		usoCupon.setDescuentoAplicado(descuentoAplicado);
+		usoCupon.setEstado("APLICADO");
+		pedido.getUsosCupon().add(usoCupon);
+		cupon.setUsosActuales(cupon.getUsosActuales() + 1);
+		pedido.setDescuento(pedido.getDescuento().add(descuentoAplicado));
+		calcularTotales(pedido);
+		return pedidoRepository.save(pedido);
+	}
+
+	@Transactional
+	public Pedido anularUsoCupon(Long idPedido, Long idUsoCupon) {
+		Pedido pedido = buscarPedido(idPedido);
+		UsoCupon usoCupon = usoCuponRepository.findById(idUsoCupon)
+				.orElseThrow(() -> new ResourceNotFoundException("No existe el uso de cupon con id " + idUsoCupon));
+		if (!pedido.getIdPedido().equals(usoCupon.getPedido().getIdPedido())) {
+			throw new IllegalArgumentException("El uso de cupon no pertenece al pedido");
+		}
+		if (!"APLICADO".equals(usoCupon.getEstado())) {
+			throw new IllegalArgumentException("El uso de cupon ya esta anulado");
+		}
+		usoCupon.setEstado("ANULADO");
+		usoCupon.getCupon().setUsosActuales(usoCupon.getCupon().getUsosActuales() - 1);
+		pedido.setDescuento(pedido.getDescuento().subtract(usoCupon.getDescuentoAplicado()));
+		prepararDetalles(pedido);
+		calcularTotales(pedido);
+		return pedidoRepository.save(pedido);
+	}
+
 	private Pedido buscarPedido(Long id) {
 		return pedidoRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("No existe el pedido con id " + id));
@@ -151,6 +202,31 @@ public class PedidoService {
 		pedido.setSubtotal(subtotal);
 		pedido.setDescuento(descuento);
 		pedido.setTotal(total);
+	}
+
+	private void validarCuponAplicable(Pedido pedido, Cupon cupon) {
+		if (!"ACTIVO".equals(cupon.getEstado())) {
+			throw new IllegalArgumentException("El cupon no esta activo");
+		}
+		if (LocalDateTime.now().toLocalDate().isBefore(cupon.getFechaInicio())
+				|| LocalDateTime.now().toLocalDate().isAfter(cupon.getFechaVencimiento())) {
+			throw new IllegalArgumentException("El cupon no esta vigente");
+		}
+		if (cupon.getUsosActuales() >= cupon.getLimiteUso()) {
+			throw new IllegalArgumentException("El cupon alcanzo su limite de uso");
+		}
+		if (pedido.getSubtotal().compareTo(cupon.getMontoMinimo()) < 0) {
+			throw new IllegalArgumentException("El pedido no cumple el monto minimo del cupon");
+		}
+	}
+
+	private BigDecimal calcularDescuentoCupon(Pedido pedido, Cupon cupon) {
+		if ("PORCENTAJE".equals(cupon.getTipoDescuento())) {
+			return pedido.getSubtotal()
+					.multiply(cupon.getValorDescuento())
+					.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+		}
+		return cupon.getValorDescuento();
 	}
 
 	private void registrarHistorial(Pedido pedido, String estadoAnterior, String estadoNuevo, String observacion) {

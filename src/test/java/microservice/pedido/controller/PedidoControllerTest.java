@@ -47,6 +47,8 @@ class PedidoControllerTest {
 		when(pedidoService.cambiarEstado(1L, "PAGADO", "Pago confirmado")).thenReturn(pedido);
 		when(pedidoService.confirmarPedido(1L)).thenReturn(pedido);
 		when(pedidoService.cancelarPedido(1L)).thenReturn(pedido);
+		when(pedidoService.aplicarCupon(1L, 2L)).thenReturn(pedido);
+		when(pedidoService.anularUsoCupon(1L, 3L)).thenReturn(pedido);
 
 		assertThat(pedidoController.listar()).isEqualTo(pedidos);
 		assertThat(pedidoController.obtenerPorId(1L)).isEqualTo(pedido);
@@ -59,6 +61,8 @@ class PedidoControllerTest {
 				.isEqualTo(pedido);
 		assertThat(pedidoController.confirmarPedido(1L)).isEqualTo(pedido);
 		assertThat(pedidoController.cancelarPedido(1L)).isEqualTo(pedido);
+		assertThat(pedidoController.aplicarCupon(1L, 2L)).isEqualTo(pedido);
+		assertThat(pedidoController.anularUsoCupon(1L, 3L)).isEqualTo(pedido);
 	}
 
 	@Test

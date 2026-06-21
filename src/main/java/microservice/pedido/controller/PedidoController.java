@@ -79,6 +79,16 @@ public class PedidoController {
 		return pedidoService.cancelarPedido(id);
 	}
 
+	@PatchMapping("/{id}/cupon/{idCupon}")
+	public Pedido aplicarCupon(@PathVariable Long id, @PathVariable Long idCupon) {
+		return pedidoService.aplicarCupon(id, idCupon);
+	}
+
+	@PatchMapping("/{id}/cupon/{idUsoCupon}/anulacion")
+	public Pedido anularUsoCupon(@PathVariable Long id, @PathVariable Long idUsoCupon) {
+		return pedidoService.anularUsoCupon(id, idUsoCupon);
+	}
+
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> eliminar(@PathVariable Long id) {
 		pedidoService.eliminar(id);

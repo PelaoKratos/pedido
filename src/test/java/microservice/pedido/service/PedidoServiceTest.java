@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,11 +19,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import microservice.pedido.exception.ResourceNotFoundException;
+import microservice.pedido.model.Cupon;
 import microservice.pedido.model.DetallePedido;
 import microservice.pedido.model.HistorialEstadoPedido;
 import microservice.pedido.model.Pedido;
+import microservice.pedido.model.UsoCupon;
+import microservice.pedido.repository.CuponRepository;
 import microservice.pedido.repository.HistorialEstadoPedidoRepository;
 import microservice.pedido.repository.PedidoRepository;
+import microservice.pedido.repository.UsoCuponRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceTest {
@@ -33,11 +38,17 @@ class PedidoServiceTest {
 	@Mock
 	private HistorialEstadoPedidoRepository historialRepository;
 
+	@Mock
+	private CuponRepository cuponRepository;
+
+	@Mock
+	private UsoCuponRepository usoCuponRepository;
+
 	private PedidoService pedidoService;
 
 	@BeforeEach
 	void setUp() {
-		pedidoService = new PedidoService(pedidoRepository, historialRepository);
+		pedidoService = new PedidoService(pedidoRepository, historialRepository, cuponRepository, usoCuponRepository);
 	}
 
 	@Test
@@ -287,6 +298,129 @@ class PedidoServiceTest {
 				.hasMessage("Estado de pedido no valido: PERDIDO");
 	}
 
+	@Test
+	void aplicarCuponDeMontoActualizaDescuentoTotalYUso() {
+		Pedido pedido = crearPedido(1L);
+		pedido.setSubtotal(new BigDecimal("11500"));
+		Cupon cupon = crearCupon(2L, "MONTO", "1000");
+		when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+		when(cuponRepository.findById(2L)).thenReturn(Optional.of(cupon));
+		when(pedidoRepository.save(pedido)).thenReturn(pedido);
+
+		Pedido resultado = pedidoService.aplicarCupon(1L, 2L);
+
+		assertThat(resultado.getDescuento()).isEqualByComparingTo("1000");
+		assertThat(resultado.getTotal()).isEqualByComparingTo("10500");
+		assertThat(resultado.getUsosCupon()).hasSize(1);
+		assertThat(cupon.getUsosActuales()).isEqualTo(1);
+	}
+
+	@Test
+	void aplicarCuponDePorcentajeCalculaDescuento() {
+		Pedido pedido = crearPedido(1L);
+		pedido.setSubtotal(new BigDecimal("10000"));
+		Cupon cupon = crearCupon(2L, "PORCENTAJE", "10");
+		when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+		when(cuponRepository.findById(2L)).thenReturn(Optional.of(cupon));
+		when(pedidoRepository.save(pedido)).thenReturn(pedido);
+
+		Pedido resultado = pedidoService.aplicarCupon(1L, 2L);
+
+		assertThat(resultado.getDescuento()).isEqualByComparingTo("1150.00");
+		assertThat(resultado.getTotal()).isEqualByComparingTo("10350.00");
+	}
+
+	@Test
+	void aplicarCuponValidaExistenciaYReglas() {
+		Pedido pedido = crearPedido(1L);
+		pedido.setSubtotal(new BigDecimal("10000"));
+		when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+		when(cuponRepository.findById(99L)).thenReturn(Optional.empty());
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 99L))
+				.isInstanceOf(ResourceNotFoundException.class)
+				.hasMessage("No existe el cupon con id 99");
+
+		Cupon inactivo = crearCupon(2L, "MONTO", "1000");
+		inactivo.setEstado("INACTIVO");
+		when(cuponRepository.findById(2L)).thenReturn(Optional.of(inactivo));
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 2L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El cupon no esta activo");
+
+		Cupon noVigente = crearCupon(3L, "MONTO", "1000");
+		noVigente.setFechaInicio(LocalDate.now().plusDays(1));
+		when(cuponRepository.findById(3L)).thenReturn(Optional.of(noVigente));
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 3L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El cupon no esta vigente");
+
+		Cupon vencido = crearCupon(4L, "MONTO", "1000");
+		vencido.setFechaVencimiento(LocalDate.now().minusDays(1));
+		when(cuponRepository.findById(4L)).thenReturn(Optional.of(vencido));
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 4L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El cupon no esta vigente");
+
+		Cupon sinUsos = crearCupon(5L, "MONTO", "1000");
+		sinUsos.setUsosActuales(10);
+		sinUsos.setLimiteUso(10);
+		when(cuponRepository.findById(5L)).thenReturn(Optional.of(sinUsos));
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 5L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El cupon alcanzo su limite de uso");
+
+		Cupon montoMinimo = crearCupon(6L, "MONTO", "1000");
+		montoMinimo.setMontoMinimo(new BigDecimal("999999"));
+		when(cuponRepository.findById(6L)).thenReturn(Optional.of(montoMinimo));
+		assertThatThrownBy(() -> pedidoService.aplicarCupon(1L, 6L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El pedido no cumple el monto minimo del cupon");
+	}
+
+	@Test
+	void anularUsoCuponRevierteDescuento() {
+		Pedido pedido = crearPedido(1L);
+		pedido.setSubtotal(new BigDecimal("11500"));
+		pedido.setDescuento(new BigDecimal("1000"));
+		Cupon cupon = crearCupon(2L, "MONTO", "1000");
+		cupon.setUsosActuales(1);
+		UsoCupon usoCupon = crearUsoCupon(7L, pedido, cupon);
+		when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+		when(usoCuponRepository.findById(7L)).thenReturn(Optional.of(usoCupon));
+		when(pedidoRepository.save(pedido)).thenReturn(pedido);
+
+		Pedido resultado = pedidoService.anularUsoCupon(1L, 7L);
+
+		assertThat(resultado.getDescuento()).isEqualByComparingTo("0");
+		assertThat(resultado.getTotal()).isEqualByComparingTo("11500");
+		assertThat(usoCupon.getEstado()).isEqualTo("ANULADO");
+		assertThat(cupon.getUsosActuales()).isZero();
+	}
+
+	@Test
+	void anularUsoCuponValidaReglas() {
+		Pedido pedido = crearPedido(1L);
+		when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+		when(usoCuponRepository.findById(99L)).thenReturn(Optional.empty());
+		assertThatThrownBy(() -> pedidoService.anularUsoCupon(1L, 99L))
+				.isInstanceOf(ResourceNotFoundException.class)
+				.hasMessage("No existe el uso de cupon con id 99");
+
+		Pedido otroPedido = crearPedido(2L);
+		UsoCupon usoOtroPedido = crearUsoCupon(3L, otroPedido, crearCupon(4L, "MONTO", "500"));
+		when(usoCuponRepository.findById(3L)).thenReturn(Optional.of(usoOtroPedido));
+		assertThatThrownBy(() -> pedidoService.anularUsoCupon(1L, 3L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El uso de cupon no pertenece al pedido");
+
+		UsoCupon usoAnulado = crearUsoCupon(5L, pedido, crearCupon(6L, "MONTO", "500"));
+		usoAnulado.setEstado("ANULADO");
+		when(usoCuponRepository.findById(5L)).thenReturn(Optional.of(usoAnulado));
+		assertThatThrownBy(() -> pedidoService.anularUsoCupon(1L, 5L))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("El uso de cupon ya esta anulado");
+	}
+
 	private Pedido crearPedido(Long id) {
 		Pedido pedido = new Pedido();
 		pedido.setIdPedido(id);
@@ -301,6 +435,7 @@ class PedidoServiceTest {
 				crearDetalle(100L, 2, "5000", "0"),
 				crearDetalle(200L, 1, "2000", "500"))));
 		pedido.setHistorialEstados(new ArrayList<>());
+		pedido.setUsosCupon(new ArrayList<>());
 		return pedido;
 	}
 
@@ -311,5 +446,31 @@ class PedidoServiceTest {
 		detalle.setPrecioUnitario(new BigDecimal(precio));
 		detalle.setDescuento(new BigDecimal(descuento));
 		return detalle;
+	}
+
+	private Cupon crearCupon(Long id, String tipoDescuento, String valorDescuento) {
+		Cupon cupon = new Cupon();
+		cupon.setIdCupon(id);
+		cupon.setCodigo("CUPON" + id);
+		cupon.setTipoDescuento(tipoDescuento);
+		cupon.setValorDescuento(new BigDecimal(valorDescuento));
+		cupon.setMontoMinimo(BigDecimal.ZERO);
+		cupon.setFechaInicio(LocalDate.now().minusDays(1));
+		cupon.setFechaVencimiento(LocalDate.now().plusDays(1));
+		cupon.setLimiteUso(10);
+		cupon.setUsosActuales(0);
+		cupon.setEstado("ACTIVO");
+		return cupon;
+	}
+
+	private UsoCupon crearUsoCupon(Long id, Pedido pedido, Cupon cupon) {
+		UsoCupon usoCupon = new UsoCupon();
+		usoCupon.setIdUsoCupon(id);
+		usoCupon.setPedido(pedido);
+		usoCupon.setCupon(cupon);
+		usoCupon.setFechaUso(LocalDateTime.now());
+		usoCupon.setDescuentoAplicado(new BigDecimal("1000"));
+		usoCupon.setEstado("APLICADO");
+		return usoCupon;
 	}
 }
