@@ -1,0 +1,40 @@
+<mxfile host="app.diagrams.net" modified="2026-06-21T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="pedido-diagrama-clases" name="Diagrama Pedido">
+    <mxGraphModel dx="1186" dy="768" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Microservicio Pedidos - Diagrama de Clases" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="315" y="45" width="540" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="Pedido" value="&lt;table border=&quot;0&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;b&gt;Pedido&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #6c8ebf;padding:8px 10px;&quot; align=&quot;left&quot;&gt;- idPedido: Long&lt;br&gt;- idCliente: Long&lt;br&gt;- idSucursal: Long&lt;br&gt;- idDireccion: Long&lt;br&gt;- idPago: Long&lt;br&gt;- fechaPedido: LocalDateTime&lt;br&gt;- subtotal: BigDecimal&lt;br&gt;- descuento: BigDecimal&lt;br&gt;- total: BigDecimal&lt;br&gt;- estado: String&lt;br&gt;- detalles: List&amp;lt;DetallePedido&amp;gt;&lt;br&gt;- historialEstados: List&amp;lt;HistorialEstadoPedido&amp;gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #6c8ebf;padding:8px 10px;&quot; align=&quot;left&quot;&gt;+ crearPedido(): void&lt;br&gt;+ calcularTotal(): BigDecimal&lt;br&gt;+ confirmarPedido(): void&lt;br&gt;+ cancelarPedido(): void&lt;br&gt;+ actualizarEstado(): void&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=center;verticalAlign=top;spacing=0;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="420" y="110" width="330" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="DetallePedido" value="&lt;table border=&quot;0&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;b&gt;DetallePedido&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #82b366;padding:8px 10px;&quot; align=&quot;left&quot;&gt;- idDetallePedido: Long&lt;br&gt;- idProducto: Long&lt;br&gt;- cantidad: Integer&lt;br&gt;- precioUnitario: BigDecimal&lt;br&gt;- descuento: BigDecimal&lt;br&gt;- subtotal: BigDecimal&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #82b366;padding:8px 10px;&quot; align=&quot;left&quot;&gt;+ calcularSubtotal(): BigDecimal&lt;br&gt;+ actualizarCantidad(): void&lt;br&gt;+ quitarProducto(): void&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=center;verticalAlign=top;spacing=0;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="95" y="255" width="285" height="245" as="geometry"/>
+        </mxCell>
+        <mxCell id="HistorialEstadoPedido" value="&lt;table border=&quot;0&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; width=&quot;100%&quot;&gt;&lt;tr&gt;&lt;td align=&quot;center&quot;&gt;&lt;b&gt;HistorialEstadoPedido&lt;/b&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #b85450;padding:8px 10px;&quot; align=&quot;left&quot;&gt;- idHistorial: Long&lt;br&gt;- estadoAnterior: String&lt;br&gt;- estadoNuevo: String&lt;br&gt;- fechaCambio: LocalDateTime&lt;br&gt;- observacion: String&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;border-top:1px solid #b85450;padding:8px 10px;&quot; align=&quot;left&quot;&gt;+ registrarCambio(): void&lt;br&gt;+ consultarHistorial(): void&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;verticalAlign=top;spacing=0;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="790" y="270" width="305" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="edgePedidoDetalle" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;endFill=0;" edge="1" parent="1" source="Pedido" target="DetallePedido">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="multPedidoDetallePedido" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="390" y="350" width="30" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="multPedidoDetalleDetalle" value="1..*" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="375" y="385" width="45" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="edgePedidoHistorial" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;endFill=0;" edge="1" parent="1" source="Pedido" target="HistorialEstadoPedido">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="multPedidoHistorialPedido" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="755" y="350" width="30" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="multPedidoHistorialHistorial" value="0..*" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="750" y="385" width="45" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
