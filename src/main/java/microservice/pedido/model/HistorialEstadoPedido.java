@@ -26,6 +26,9 @@ public class HistorialEstadoPedido {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long idHistorial;
 
+	@Column(name = "id_pedido", insertable = false, updatable = false)
+	private Long idPedido;
+
 	private String estadoAnterior;
 
 	@Column(nullable = false)
@@ -40,4 +43,20 @@ public class HistorialEstadoPedido {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "id_pedido", nullable = false)
 	private Pedido pedido;
+
+	public void registrarCambio(String estadoAnterior, String estadoNuevo, String observacion) {
+		this.estadoAnterior = estadoAnterior;
+		this.estadoNuevo = estadoNuevo;
+		this.observacion = observacion;
+		this.fechaCambio = LocalDateTime.now();
+	}
+
+	public String consultarHistorial() {
+		return estadoAnterior + " -> " + estadoNuevo + ": " + observacion;
+	}
+
+	public void setPedido(Pedido pedido) {
+		this.pedido = pedido;
+		this.idPedido = pedido != null ? pedido.getIdPedido() : null;
+	}
 }

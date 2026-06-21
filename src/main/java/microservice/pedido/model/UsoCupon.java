@@ -28,6 +28,12 @@ public class UsoCupon {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long idUsoCupon;
 
+	@Column(name = "id_pedido", insertable = false, updatable = false)
+	private Long idPedido;
+
+	@Column(name = "id_cupon", insertable = false, updatable = false)
+	private Long idCupon;
+
 	@Column(nullable = false)
 	private LocalDateTime fechaUso;
 
@@ -46,4 +52,27 @@ public class UsoCupon {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "id_cupon", nullable = false)
 	private Cupon cupon;
+
+	public void registrarUso() {
+		fechaUso = LocalDateTime.now();
+		estado = "APLICADO";
+	}
+
+	public boolean validarUso() {
+		return "APLICADO".equals(estado);
+	}
+
+	public void anularUso() {
+		estado = "ANULADO";
+	}
+
+	public void setPedido(Pedido pedido) {
+		this.pedido = pedido;
+		this.idPedido = pedido != null ? pedido.getIdPedido() : null;
+	}
+
+	public void setCupon(Cupon cupon) {
+		this.cupon = cupon;
+		this.idCupon = cupon != null ? cupon.getIdCupon() : null;
+	}
 }

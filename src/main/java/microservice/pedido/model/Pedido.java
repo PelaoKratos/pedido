@@ -69,4 +69,35 @@ public class Pedido {
 	@JsonManagedReference(value = "pedido-usos-cupon")
 	@OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<UsoCupon> usosCupon = new ArrayList<>();
+
+	public void crearPedido() {
+		if (fechaPedido == null) {
+			fechaPedido = LocalDateTime.now();
+		}
+		if (estado == null || estado.isBlank()) {
+			estado = "CREADO";
+		}
+		calcularTotal();
+	}
+
+	public BigDecimal calcularTotal() {
+		subtotal = detalles.stream()
+				.map(DetallePedido::calcularSubtotal)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		BigDecimal descuentoAplicado = descuento == null ? BigDecimal.ZERO : descuento;
+		total = subtotal.subtract(descuentoAplicado);
+		return total;
+	}
+
+	public void confirmarPedido() {
+		estado = "CONFIRMADO";
+	}
+
+	public void cancelarPedido() {
+		estado = "CANCELADO";
+	}
+
+	public void actualizarEstado(String estado) {
+		this.estado = estado;
+	}
 }

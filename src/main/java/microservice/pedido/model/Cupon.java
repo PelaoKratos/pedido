@@ -64,4 +64,35 @@ public class Cupon {
 	@JsonManagedReference(value = "cupon-usos-cupon")
 	@OneToMany(mappedBy = "cupon", cascade = CascadeType.ALL)
 	private List<UsoCupon> usosCupon = new ArrayList<>();
+
+	public void crearCupon() {
+		if (usosActuales == null) {
+			usosActuales = 0;
+		}
+		if (estado == null || estado.isBlank()) {
+			estado = "ACTIVO";
+		}
+	}
+
+	public void modificarCupon(String codigo, String tipoDescuento, BigDecimal valorDescuento) {
+		this.codigo = codigo;
+		this.tipoDescuento = tipoDescuento;
+		this.valorDescuento = valorDescuento;
+	}
+
+	public boolean validarCupon() {
+		LocalDate hoy = LocalDate.now();
+		return "ACTIVO".equals(estado)
+				&& !hoy.isBefore(fechaInicio)
+				&& !hoy.isAfter(fechaVencimiento)
+				&& usosActuales < limiteUso;
+	}
+
+	public void activarCupon() {
+		estado = "ACTIVO";
+	}
+
+	public void desactivarCupon() {
+		estado = "INACTIVO";
+	}
 }

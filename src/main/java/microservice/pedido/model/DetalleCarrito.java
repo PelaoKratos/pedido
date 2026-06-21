@@ -23,14 +23,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class DetallePedido {
+public class DetalleCarrito {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long idDetallePedido;
+	private Long idDetalleCarrito;
 
-	@Column(name = "id_pedido", insertable = false, updatable = false)
-	private Long idPedido;
+	@Column(name = "id_carrito", insertable = false, updatable = false)
+	private Long idCarrito;
 
 	@NotNull(message = "El id de producto es obligatorio")
 	private Long idProducto;
@@ -43,39 +43,26 @@ public class DetallePedido {
 	@PositiveOrZero(message = "El precio unitario no puede ser negativo")
 	private BigDecimal precioUnitario;
 
-	@PositiveOrZero(message = "El descuento no puede ser negativo")
-	private BigDecimal descuento = BigDecimal.ZERO;
-
 	@PositiveOrZero(message = "El subtotal no puede ser negativo")
 	private BigDecimal subtotal = BigDecimal.ZERO;
 
-	@JsonBackReference
+	@JsonBackReference(value = "carrito-detalles")
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "id_pedido", nullable = false)
-	private Pedido pedido;
-
-	public BigDecimal calcularSubtotal() {
-		BigDecimal descuentoAplicado = descuento == null ? BigDecimal.ZERO : descuento;
-		return precioUnitario.multiply(BigDecimal.valueOf(cantidad)).subtract(descuentoAplicado);
-	}
+	@JoinColumn(name = "id_carrito", nullable = false)
+	private CarritoCompra carrito;
 
 	public void actualizarCantidad(Integer cantidad) {
 		this.cantidad = cantidad;
-		this.subtotal = calcularSubtotal();
+		calcularSubtotal();
 	}
 
-	public void quitarProducto() {
-		this.cantidad = 0;
-		this.subtotal = BigDecimal.ZERO;
-	}
-
-	@Column(nullable = false)
-	public BigDecimal getSubtotal() {
+	public BigDecimal calcularSubtotal() {
+		subtotal = precioUnitario.multiply(BigDecimal.valueOf(cantidad));
 		return subtotal;
 	}
 
-	public void setPedido(Pedido pedido) {
-		this.pedido = pedido;
-		this.idPedido = pedido != null ? pedido.getIdPedido() : null;
+	public void setCarrito(CarritoCompra carrito) {
+		this.carrito = carrito;
+		this.idCarrito = carrito != null ? carrito.getIdCarrito() : null;
 	}
 }
