@@ -112,7 +112,6 @@
 				<configuration>
 					<excludes>
 						<exclude>microservice/pedido/PedidoApplication.class</exclude>
-						<exclude>microservice/pedido/model/**</exclude>
 						<exclude>microservice/pedido/repository/**</exclude>
 					</excludes>
 				</configuration>

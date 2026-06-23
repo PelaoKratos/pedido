@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import microservice.pedido.client.MicroserviceValidationClient;
 import microservice.pedido.exception.ResourceNotFoundException;
 import microservice.pedido.model.Cupon;
 import microservice.pedido.model.DetallePedido;
@@ -44,11 +45,15 @@ class PedidoServiceTest {
 	@Mock
 	private UsoCuponRepository usoCuponRepository;
 
+	@Mock
+	private MicroserviceValidationClient microserviceValidationClient;
+
 	private PedidoService pedidoService;
 
 	@BeforeEach
 	void setUp() {
-		pedidoService = new PedidoService(pedidoRepository, historialRepository, cuponRepository, usoCuponRepository);
+		pedidoService = new PedidoService(pedidoRepository, historialRepository, cuponRepository, usoCuponRepository,
+				microserviceValidationClient);
 	}
 
 	@Test

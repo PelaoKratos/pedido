@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import microservice.pedido.client.MicroserviceValidationClient;
 import microservice.pedido.exception.ResourceNotFoundException;
 import microservice.pedido.model.CarritoCompra;
 import microservice.pedido.model.DetalleCarrito;
@@ -20,9 +21,11 @@ public class CarritoService {
 	private static final String ESTADO_CONFIRMADO = "CONFIRMADO";
 
 	private final CarritoCompraRepository carritoRepository;
+	private final MicroserviceValidationClient microserviceValidationClient;
 
-	public CarritoService(CarritoCompraRepository carritoRepository) {
+	public CarritoService(CarritoCompraRepository carritoRepository, MicroserviceValidationClient microserviceValidationClient) {
 		this.carritoRepository = carritoRepository;
+		this.microserviceValidationClient = microserviceValidationClient;
 	}
 
 	public List<CarritoCompra> listar() {
@@ -51,6 +54,7 @@ public class CarritoService {
 		} else {
 			carrito.setEstado(normalizarEstado(carrito.getEstado()));
 		}
+		microserviceValidationClient.validarCliente(carrito.getIdCliente());
 		prepararDetalles(carrito);
 		carrito.calcularSubtotal();
 		return carritoRepository.save(carrito);
@@ -135,6 +139,7 @@ public class CarritoService {
 	}
 
 	private void validarDetalle(DetalleCarrito detalle) {
+		microserviceValidationClient.validarProducto(detalle.getIdProducto());
 		if (detalle.getCantidad() == null || detalle.getCantidad() <= 0) {
 			throw new IllegalArgumentException("La cantidad debe ser mayor a cero");
 		}

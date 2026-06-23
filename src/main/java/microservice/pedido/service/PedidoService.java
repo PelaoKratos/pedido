@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import microservice.pedido.client.MicroserviceValidationClient;
 import microservice.pedido.exception.ResourceNotFoundException;
 import microservice.pedido.model.DetallePedido;
 import microservice.pedido.model.HistorialEstadoPedido;
@@ -32,13 +33,16 @@ public class PedidoService {
 	private final HistorialEstadoPedidoRepository historialRepository;
 	private final CuponRepository cuponRepository;
 	private final UsoCuponRepository usoCuponRepository;
+	private final MicroserviceValidationClient microserviceValidationClient;
 
 	public PedidoService(PedidoRepository pedidoRepository, HistorialEstadoPedidoRepository historialRepository,
-			CuponRepository cuponRepository, UsoCuponRepository usoCuponRepository) {
+			CuponRepository cuponRepository, UsoCuponRepository usoCuponRepository,
+			MicroserviceValidationClient microserviceValidationClient) {
 		this.pedidoRepository = pedidoRepository;
 		this.historialRepository = historialRepository;
 		this.cuponRepository = cuponRepository;
 		this.usoCuponRepository = usoCuponRepository;
+		this.microserviceValidationClient = microserviceValidationClient;
 	}
 
 	public List<Pedido> listar() {
@@ -67,6 +71,7 @@ public class PedidoService {
 		} else {
 			pedido.setEstado(normalizarEstado(pedido.getEstado()));
 		}
+		validarReferenciasExternas(pedido);
 		prepararDetalles(pedido);
 		calcularTotales(pedido);
 		registrarHistorial(pedido, null, pedido.getEstado(), "Pedido creado");
@@ -76,6 +81,7 @@ public class PedidoService {
 	@Transactional
 	public Pedido actualizar(Long id, Pedido datosPedido) {
 		Pedido pedido = buscarPedido(id);
+		validarReferenciasExternas(datosPedido);
 		pedido.setIdCliente(datosPedido.getIdCliente());
 		pedido.setIdSucursal(datosPedido.getIdSucursal());
 		pedido.setIdDireccion(datosPedido.getIdDireccion());
@@ -186,6 +192,17 @@ public class PedidoService {
 			detalle.setSubtotal(detalle.calcularSubtotal());
 			if (detalle.getSubtotal().compareTo(BigDecimal.ZERO) < 0) {
 				throw new IllegalArgumentException("El subtotal del detalle no puede ser negativo");
+			}
+		}
+	}
+
+	private void validarReferenciasExternas(Pedido pedido) {
+		microserviceValidationClient.validarCliente(pedido.getIdCliente());
+		microserviceValidationClient.validarSucursal(pedido.getIdSucursal());
+		microserviceValidationClient.validarPago(pedido.getIdPago());
+		if (pedido.getDetalles() != null) {
+			for (DetallePedido detalle : pedido.getDetalles()) {
+				microserviceValidationClient.validarProducto(detalle.getIdProducto());
 			}
 		}
 	}

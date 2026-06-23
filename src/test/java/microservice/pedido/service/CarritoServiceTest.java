@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import microservice.pedido.client.MicroserviceValidationClient;
 import microservice.pedido.exception.ResourceNotFoundException;
 import microservice.pedido.model.CarritoCompra;
 import microservice.pedido.model.DetalleCarrito;
@@ -28,11 +29,14 @@ class CarritoServiceTest {
 	@Mock
 	private CarritoCompraRepository carritoRepository;
 
+	@Mock
+	private MicroserviceValidationClient microserviceValidationClient;
+
 	private CarritoService carritoService;
 
 	@BeforeEach
 	void setUp() {
-		carritoService = new CarritoService(carritoRepository);
+		carritoService = new CarritoService(carritoRepository, microserviceValidationClient);
 	}
 
 	@Test
